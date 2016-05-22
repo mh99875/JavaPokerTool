@@ -14,6 +14,8 @@ import java.awt.image.BufferedImage;
  * 
  */
 
+
+
 public class RGBGridCharShield extends RGBGrid {
     
     public  RGBGridCharShield (int nRows, int nCols) {
