@@ -34,6 +34,7 @@ public abstract class PokerTable {
     protected                   int                 numSeats;
     protected                   int                 userSeat        =   -1;
     protected                   ArrayList<String>   shieldNames     =   null;             
+    protected                   Point               anchor;
     private     final           PlayerNamesReader   pnr;
     private     final           PokerWindow         pw;
     private     final           String              className       =   this.getClass().getSimpleName();
@@ -47,6 +48,7 @@ public abstract class PokerTable {
      * @return 
      */
     
+    abstract    void            anchorReset();
     abstract    boolean         foldedHand(int s, BufferedImage b);
     abstract    boolean         hasButton(int s, BufferedImage b);
     abstract    boolean         hasCardLeftEdge(int s, BufferedImage b);
@@ -120,6 +122,15 @@ public abstract class PokerTable {
     PokerTable(PokerWindow pw) {
         tableName       =   pw.windowName();
         pnr             =   new PlayerNamesReader(this, false);
+        
+        try {
+            anchor          =   pw.getWindowAnchorCopy();
+        }
+        catch ( AnchorNotFoundException e ) {
+            Session.logMessageLine("PokerTable:Ctor(). Anchor Not Found. Exiting");
+            Session.exit(0);
+        }
+        
         this.pw         =   pw;
     }
     
