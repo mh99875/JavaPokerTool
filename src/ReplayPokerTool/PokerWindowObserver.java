@@ -5,6 +5,7 @@
  */
 package ReplayPokerTool;
 
+import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.util.Calendar;
 
@@ -32,22 +33,22 @@ public class PokerWindowObserver implements Runnable {
     
     long    failureMS   =   0;
     
-    
     PokerWindowObserver (GameManager gm) {
         this.gm            =   gm;
     }
     
-    private boolean    reFindAnchor(ReplayPokerWindow pts) {
+    private boolean    reFindAnchor(ReplayPokerWindow rpw) {
         String  prefix  =   this.getClass().getSimpleName() + ":reFindAnchor";
         
         if ( Session.logLevelSet(Session.logType.INVALIDANCHOR)  )
             Session.logMessageLine(prefix + "\tRefinding Window Anchor");
         
         try {
-            pts.findWindowAnchor();
+            rpw.findWindowAnchor();
             
-            if ( Session.logLevelSet(Session.logType.INVALIDANCHOR)  )
+            if ( Session.logLevelSet(Session.logType.INVALIDANCHOR)  ) {
                 Session.logMessageLine(prefix + "\tFound Window Anchor");
+            }
             
             return true;
         }
@@ -71,21 +72,25 @@ public class PokerWindowObserver implements Runnable {
             try {
                 Thread.sleep(200);
                                
-                ReplayPokerWindow   pts =   gm.pts();
+                ReplayPokerWindow   rpw =   gm.pts();
                 
                 BufferedImage       b   =   CardUtilities.getCurrentBoard();
                 
                 if ( Session.logLevelSet(Session.logType.INVALIDANCHOR)  )
                     Session.logMessageLine(prefix + "\tChecking Anchor");
                 
-                if ( !pts.candidateForAnchor(b,pts.windowAnchorX(), pts.windowAnchorY() ) ) {
-                    pts.setAnchorToInvalid();
+                if ( !rpw.candidateForAnchor(b,rpw.windowAnchorX(), rpw.windowAnchorY() ) ) {
+                    rpw.setAnchorToInvalid();
                     
                     if ( Session.logLevelSet(Session.logType.INVALIDANCHOR)  )
                         Session.logMessageLine(prefix + "\tWindow Anchor is Invalid");
                                         
-                    if ( reFindAnchor(pts) ) {
-                        gm.currentGame().setPokerTable(new ReplayPokerTable( pts ));
+                    if ( reFindAnchor(rpw) ) {
+                        if ( Session.logLevelSet(Session.logType.INVALIDANCHOR)  )
+                            Session.logMessageLine(prefix + "\tTelling Table to Update Anchors");
+                        
+                        gm.currentGame().table().anchorReset( );
+                        
                         failureMS   =   0;
                     }
                     else if ( failureMS == 0 ) {
@@ -120,10 +125,10 @@ public class PokerWindowObserver implements Runnable {
             catch ( NullPointerException | AnchorNotFoundException e) {
                 break;
             }
-            catch ( NoSeatsFoundException  e ) {
-                if ( Session.logLevelSet(Session.logType.ERROR)  )
-                    Session.logMessageLine(prefix + "\tError. Unable to Find Seats.");                
-            }
+            //catch ( NoSeatsFoundException  e ) {
+            //    if ( Session.logLevelSet(Session.logType.ERROR)  )
+            //        Session.logMessageLine(prefix + "\tError. Unable to Find Seats.");                
+            //}
         }
     }
 }
