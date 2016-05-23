@@ -154,7 +154,7 @@ public class PlayerNamesReader {
         for (y=5; y<=11; y++) {
             
             blackInRow = 0;
-            for (x=1; x<=70; x++) {
+            for (x=5; x<=70; x++) {
                 
                 pixel   =   b.getRGB(seatX+x, seatY-y);
                 r       =   CardUtilities.pixelRedValue(pixel);
