@@ -290,13 +290,20 @@ public class RGBGridCharShield extends RGBGrid {
         String  prefix  =  this.getClass().getSimpleName() + ":acceptChar";
         
         if ( Session.logLevelSet(Session.logType.SHIELD_CHAR)  )
-            Session.logMessageLine(prefix + "\tChar: " + c + " Width: " + width() );
+            Session.logMessageLine(prefix + "\tChar: " + c + " Width: " + width());
         
-        if ( c.equals("_"))
+        if ( c.equals("_")) {
+            if ( Session.logLevelSet(Session.logType.SHIELD_CHAR)  )
+                Session.logMessageLine(prefix + "\tChecking Char: " + c + " Returning becuase it's a -" );
+            
             return c;
+        }
         
         // it's always an m when chars inside the box are combined
         if ( c.equals("m") ) {
+            if ( Session.logLevelSet(Session.logType.SHIELD_CHAR)  )
+                Session.logMessageLine(prefix + "\tChecking : " + c + " It's an m" );
+            
             int bad=0;
             for (int i=0; i<width(); i++) {
                 if ( filledInColumn(i) > 8 ) {
@@ -347,6 +354,9 @@ public class RGBGridCharShield extends RGBGrid {
         }
         
         
+        if ( Session.logLevelSet(Session.logType.SHIELD_CHAR)  )
+            Session.logMessageLine(prefix + "\tChecking Char: " + c + " Based on Width" );
+        
         switch ( width() ) {
             
             case 0:
@@ -380,10 +390,14 @@ public class RGBGridCharShield extends RGBGrid {
                         }
                     }
                 }
+                break;
 
             case 4:
             case 5:
             case 6:
+                    if ( Session.logLevelSet(Session.logType.SHIELD_CHAR)  )
+                        Session.logMessageLine(prefix + "\tChecking Char: " + c + " Width: " + width() );
+                
                     for (int r=2; r<10; r++) {
                         if ( filledInRow(r) == 0 ) {
                             throw   new UnableToReadCharException(prefix + "\tEmpty Row " + r);
@@ -392,9 +406,12 @@ public class RGBGridCharShield extends RGBGrid {
                     
                     if ( c.equals("n") ) {
                         if ( (filledInColumn(0) <7) || ( filledInColumn(width()-1) < 7))  {
-                            throw   new UnableToReadCharException(prefix);      
+                            throw   new UnableToReadCharException(prefix + "\n failed");      
                         }
                     }
+                    
+                    if ( (width() > 4) && c.equals("1") )
+                         throw   new UnableToReadCharException(prefix + "\t1 too wide");
                 break;
                 
                 
@@ -406,8 +423,9 @@ public class RGBGridCharShield extends RGBGrid {
                 
                 
             case 8:
-                 if ( c.equals("A") || c.equals("M"))
+                 if ( c.equals("A") )
                      return c;
+                 
                 
             case 9:
             case 10:
