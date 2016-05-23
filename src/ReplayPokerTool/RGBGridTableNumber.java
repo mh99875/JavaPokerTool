@@ -65,18 +65,24 @@ public class RGBGridTableNumber extends RGBGrid {
                     Session.logMessageLine(prefix + "\tRow  Width: " + filledInRow(4));
                 }
                 
-                if ( ((filledInRow(4) == width()) || (filledInRow(4) == width()-1)) &&
+                
+                if (( ((filledInRow(4) == width()) || (filledInRow(4) == width()-1)) ||
+                        
+                     ((filledInColumn(lc)==7) && (filledInColumn(0) == 1) && (filledRowCol(4,0))) )
+                        
+                     &&
                      !filledRowCol(5,0) && !filledRowCol(6,0) &&
                      !filledRowCol(5,1) && !filledRowCol(6,1) ) {
                     
                     if ( Session.logLevelSet(Session.logType.TABLE_NUMBER)  )
-                        Session.logMessageLine(prefix + "\t--------------------->4-bar");
+                        Session.logMessageLine(prefix + "\t--------------------->4-bar or empty 4");
                         
                     value =  "4";
                 }
                 else {
                     if ( Session.logLevelSet(Session.logType.TABLE_NUMBER)  )
                         Session.logMessageLine(prefix + "\t--------------------->No 4-bar");
+                    
                     
                     if ( (width() == 3) && (filledInColumn(lc) == height()) &&
                          ((filledInColumn(0)==1) || (filledInColumn(0)==2)) ) {
