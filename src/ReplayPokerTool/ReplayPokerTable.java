@@ -94,26 +94,171 @@ public class ReplayPokerTable extends PokerTable {
     {
         super(rpw);
         
-        int i;
-        int x, y;
-        int rd,bl;
-        
+        int i;        
         String              prefix  =   "ReplayPokerTable:CTOR";
-        
-        BufferedImage       b       =   CardUtilities.getCurrentBoard();
         
         if ( ! rpw.anchorIsValid() )
             throw   new AnchorNotFoundException(prefix + "\tError. Anchor Invalid.");
-        
-        Point               anchor  =   rpw.getWindowAnchorCopy();
-        
-        
+                
         if ( Session.logLevelSet(Session.logType.INFO) )
             Session.logMessageLine(prefix + "\tPTS Valid Anchor: (" + anchor.x + "," + anchor.y + ")");
         
         
+        setPotLocations();
+        
+        numSeats = getNumberOfSeats();
+                
+        setUpSeatArray();
+        
+        findSeatLocations();
+        
+        
+    }
+    
+    final   void    setUpSeatArray() {
+        String  prefix  = this.getClass().getSimpleName() + ":setUpSeatArray";
+        
+        seats          =       new SeatLocation[numSeats];
+        
+        if ( Session.logLevelSet(Session.logType.INFO) )
+            Session.logMessageLine(prefix + "\tNum seats Table: " + numSeats);
+        
+        try {
+            for (int i=0; i<numSeats; i++)
+                seats[i]        =   new SeatLocation(i, numSeats);
+        }
+        catch ( InvalidSeatLocationException e ) {
+            
+        }
+    }
+    
+    final   void    findSeatLocations() 
+    throws NoSeatsFoundException
+    {
+        String  prefix  = this.getClass().getSimpleName() + ":findSeatLocations";
+        
+        // the seat positions are approximate and will be set
+        // when the shield is found in findSeats()
+        // the betOffset is from the found seat location
+        // finding the upper-right-hand-corner of the chips
+        // setting params for 9-handed, will change in findSeats 
+        // below if found
+        // to be a 6-seater
+        
+        int             seatsFound  =   0;
+        BufferedImage   b           =   CardUtilities.getCurrentBoard();
+        
+        
+        // based on where we think they shields might be
+        // find the exact location of each shield
+        for (int i=0;i<numSeats;i++) {
+                     
+            // move across until we find the black/gold border
+            findXandY:
+            for (int x=(seats[i].shieldX() + anchor.x);x<(seats[i].shieldX()+anchor.x+50);x++) {    
+                for (int y=seats[i].shieldY()+anchor.y; y < seats[i].shieldY()+anchor.y+30; y++) {
+                
+                    if ( atGoldShieldEdge(b,x,y) || atBrightGoldShieldEdge(b,x,y) || atGreyShieldEdge(b,x,y) ) {
+                        seats[i].setShieldLocations(x+1, y);
+
+                        if ( Session.logLevelSet(Session.logType.INFO) )
+                            Session.logMessageLine(prefix + "\tSeat[" + i + "] Found @ ("
+                                                + seats[i].shieldX() + "," + seats[i].shieldY() + ")" );
+                       
+                        seatsFound++;
+                        break   findXandY;
+                       
+                    }
+                } // end for Y
+            } // end for X
+                                              
+        } // end for every seat at the table
+        
+        // minimum number of seats at a poker table
+        if ( seatsFound < 2 ) 
+            throw   new NoSeatsFoundException();
+        
+    }
+    
+    final   int    getNumberOfSeats() {
+        
+        String  prefix  = this.getClass().getSimpleName() + ":getNumberOfSeats";
+        
+        // bootstrap load the number of seats and their locations by
+        // trying to find the seat [2] (the third seat starting clockwise
+        // at the upper left hand side
+        //seats_[2].x             = 490;
+        //seats_[2].y             = 80;
+        // if it'p there, we have a 9-handed table, else 6
+        // haven't tested on 2 and 4-handed yet
+                
+        int             wood    =   0;
+        int             rd, bl;
+        
+        BufferedImage   b       =   CardUtilities.getCurrentBoard();
+        
+        for (int x=anchor.x+500;x<anchor.x+550; x++) {
+            for (int y=anchor.y+70;y<anchor.y + 100; y++) {
+                rd   =   CardUtilities.pixelRedValue(b.getRGB(x,y));
+                bl   =   CardUtilities.pixelBlueValue(b.getRGB(x,y));
+                
+                if ( (rd>50) && (rd<100) ) {
+                    if ( bl < 25 )
+                        wood++;
+                }
+            }
+        }
+        
+        
+        if ( Session.logLevelSet(Session.logType.INFO) )
+            Session.logMessageLine(prefix + "\tWood (Rail/Shield) at Seat[2] : " + wood );
+        
+        
+        if ( wood > 200  ) {
+        
+            if ( Session.logLevelSet(Session.logType.INFO) )
+                Session.logMessageLine(prefix + "\t6-Handed Table");
+            
+            numSeats   = 6; 
+            
+        } else {
+             // and 4-seated, disambiguate by looking at seat position 3
+            
+            wood = 0;
+            for (int x=anchor.x + 530;x<anchor.x + 580; x++) {
+                for (int y=anchor.y + 175;y<anchor.y + 225; y++) {
+                    rd   =   CardUtilities.pixelRedValue(b.getRGB(x,y));
+                    bl   =   CardUtilities.pixelBlueValue(b.getRGB(x,y));
+                
+                    if ( (rd>50) && (rd<100) ) {
+                        if ( bl < 25 )
+                            wood++;
+                    }
+                }
+            }
+            
+            if ( Session.logLevelSet(Session.logType.INFO) )
+                Session.logMessageLine(prefix + "\tWood (Rail/Shield) at Seat[3] : " + wood );
+            
+            if ( wood > 200 ) {
+                numSeats   = 4;
+                if ( Session.logLevelSet(Session.logType.INFO) )
+                    Session.logMessageLine(prefix + "\t4-Handed Table");
+            } else {
+                numSeats   = 9;
+                if ( Session.logLevelSet(Session.logType.INFO) )
+                    Session.logMessageLine(prefix + "\t9-Handed Table");
+            }
+        }
+        
+        return numSeats;
+    }
+    
+    
+    final   void   setPotLocations() {
+        
         potLocation             = new Point[9];
-        for (i=0;i < 9;i++) {
+        for (int i=0;i < 9;i++) {
             potLocation[i]      = new Point();
         }
                
@@ -152,128 +297,33 @@ public class ReplayPokerTable extends PokerTable {
         // Rake
         potLocation[8].x           =   anchor.x    +   261;
         potLocation[8].y           =   anchor.y    +   99;
-                
-        // here we would check to see how many seats
-        // and set the seats that nobody can sit at to (x,y) = 0;
-        
-        // bootstrap load the number of seats and their locations by
-        // trying to find the seat [2] (the third seat starting clockwise
-        // at the upper left hand side
-        //seats_[2].x             = 490;
-        //seats_[2].y             = 80;
-        // if it'p there, we have a 9-handed table, else 6
-        // haven't tested on 2 and 4-handed yet
-                
-        int wood    =   0;
-        for (x=anchor.x+500;x<anchor.x+550; x++) {
-            for (y=anchor.y+70;y<anchor.y + 100; y++) {
-                rd   =   CardUtilities.pixelRedValue(b.getRGB(x,y));
-                bl   =   CardUtilities.pixelBlueValue(b.getRGB(x,y));
-                
-                if ( (rd>50) && (rd<100) ) {
-                    if ( bl < 25 )
-                        wood++;
-                }
-            }
-        }
-        
-        
-        if ( Session.logLevelSet(Session.logType.INFO) )
-            Session.logMessageLine(prefix + "\tWood (Rail/Shield) at Seat[2] : " + wood );
-        
-        
-        if ( wood > 200  ) {
-        
-            if ( Session.logLevelSet(Session.logType.INFO) )
-                Session.logMessageLine(prefix + "\t6-Handed Table");
-            
-            numSeats   = 6; 
-            
-        } else {
-             // and 4-seated, disambiguate by looking at seat position 3
-            
-            wood = 0;
-            for (x=anchor.x + 530;x<anchor.x + 580; x++) {
-                for (y=anchor.y + 175;y<anchor.y + 225; y++) {
-                    rd   =   CardUtilities.pixelRedValue(b.getRGB(x,y));
-                    bl   =   CardUtilities.pixelBlueValue(b.getRGB(x,y));
-                
-                    if ( (rd>50) && (rd<100) ) {
-                        if ( bl < 25 )
-                            wood++;
-                    }
-                }
-            }
-            
-            if ( Session.logLevelSet(Session.logType.INFO) )
-                Session.logMessageLine(prefix + "\tWood (Rail/Shield) at Seat[3] : " + wood );
-            
-            if ( wood > 200 ) {
-                numSeats   = 4;
-                if ( Session.logLevelSet(Session.logType.INFO) )
-                    Session.logMessageLine(prefix + "\t4-Handed Table");
-            } else {
-                numSeats   = 9;
-                if ( Session.logLevelSet(Session.logType.INFO) )
-                    Session.logMessageLine(prefix + "\t9-Handed Table");
-            }
-        }
-        
-        seats          =       new SeatLocation[numSeats];
-        
-        if ( Session.logLevelSet(Session.logType.INFO) )
-            Session.logMessageLine(prefix + "\tNum seats Table: " + numSeats);
+                  
+    } 
+    
+    
+    @Override
+    void    anchorReset() {
+       
+        setUpSeatArray();
         
         try {
-            for (i=0; i<numSeats; i++)
-                seats[i]        =   new SeatLocation(i, numSeats);
+            anchor  =   pw().getWindowAnchorCopy();
+        
+            setPotLocations();
+        
+            findSeatLocations();
         }
-        catch ( InvalidSeatLocationException e ) {
+        catch ( NoSeatsFoundException | AnchorNotFoundException e) {
             
         }
-        
-        // the seat positions are approximate and will be set
-        // when the shield is found in findSeats()
-        // the betOffset is from the found seat location
-        // finding the upper-right-hand-corner of the chips
-        // setting params for 9-handed, will change in findSeats 
-        // below if found
-        // to be a 6-seater
-        
-        
-        int seatsFound  =   0;
-        // based on where we think they shields might be
-        // find the exact location of each shield
-        for (i=0;i<numSeats;i++) {
-                     
-            // move across until we find the black/gold border
-            findXandY:
-            for (x=(seats[i].shieldX() + anchor.x);x<(seats[i].shieldX()+anchor.x+50);x++) {    
-                for ( y=seats[i].shieldY()+anchor.y; y < seats[i].shieldY()+anchor.y+30; y++) {
-                
-                    if ( atGoldShieldEdge(b,x,y) || atBrightGoldShieldEdge(b,x,y) || atGreyShieldEdge(b,x,y) ) {
-                        seats[i].setShieldLocations(x+1, y);
-
-                        if ( Session.logLevelSet(Session.logType.INFO) )
-                            Session.logMessageLine(prefix + "\tSeat[" + i + "] Found @ ("
-                                                + seats[i].shieldX() + "," + seats[i].shieldY() + ")" );
-                       
-                        seatsFound++;
-                        break   findXandY;
-                       
-                    }
-                } // end for Y
-            } // end for X
-                                              
-        } // end for every seat at the table
-        
-        // minimum number of seats at a poker table
-        if ( seatsFound < 2 ) 
-            throw   new NoSeatsFoundException();
     }
     
     
+    
     public final  boolean  atGoldShieldEdge(BufferedImage b, int x, int y ) {
+        
+        if ( (x < 0) || (y<0) ) 
+            return false;
         
         return (   CardUtilities.isBlackPixel(b.getRGB(x,y))              
                 && CardUtilities.isGoldShieldPixel(b.getRGB(x+1,y))  
@@ -289,6 +339,9 @@ public class ReplayPokerTable extends PokerTable {
     
      public final  boolean  atBrightGoldShieldEdge(BufferedImage b, int x, int y ) {
         
+        if ( (x < 0) || (y<0) ) 
+            return false;
+         
         return (   CardUtilities.AllRGBBelowValue(75, b.getRGB(x-1,y-1))  &&  CardUtilities.isBrightGoldShieldPixel(b.getRGB(x,y-1)) 
                 && CardUtilities.AllRGBBelowValue(75, b.getRGB(x-1,y-2))  &&  CardUtilities.isBrightGoldShieldPixel(b.getRGB(x,y-2)) 
                 && CardUtilities.AllRGBBelowValue(75, b.getRGB(x-1,y-3))  &&  CardUtilities.isBrightGoldShieldPixel(b.getRGB(x,y-3)) 
@@ -298,6 +351,9 @@ public class ReplayPokerTable extends PokerTable {
     }
     
     public final  boolean  atGreyShieldEdge(BufferedImage b, int x, int y ) {
+        
+        if ( (x < 0) || (y<0) ) 
+            return false;
         
         int grey = 0;
         int pixel;
