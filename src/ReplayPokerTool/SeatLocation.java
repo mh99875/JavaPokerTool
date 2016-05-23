@@ -5,6 +5,8 @@
  */
 package ReplayPokerTool;
 
+import java.awt.Point;
+
 /**
  *
  * @author marcushaupt
@@ -55,12 +57,23 @@ public class SeatLocation {
     }
     
     
+    void    moveByOffset(Point offset) {
+        
+        shieldX     +=  offset.x;        
+        shieldY     +=  offset.y;
+        
+        betX        +=  offset.x;
+        betY        +=  offset.y;
+        
+        buttonX     +=  offset.x;
+        buttonY     +=  offset.y;
+        
+    }
+    
     void    setShieldLocations (int shieldX, int shieldY) {
         
         String  prefix  =   this.getClass().getSimpleName() + ":setShieldLocations[" + seatNum + "]";
-        
-        // read the bet into a grid, break, separate and extract
-        
+                
         this.shieldX    =   shieldX;
         this.shieldY    =   shieldY;     
         
